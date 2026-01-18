@@ -1,0 +1,137 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(uuid())
+  name          String?
+  email         String   @unique
+  role          UserRole @default(ATTENDEE)
+  city          String?
+  interests     String[]
+  createdAt     DateTime @default(now())
+
+  bookings      Booking[]
+  feedbacks     Feedback[]
+  eventsCreated Event[]  @relation("OrganizerEvents")
+}
+
+enum UserRole {
+  ATTENDEE
+  ORGANIZER
+  ADMIN
+}
+
+model Event {
+  id                String        @id @default(uuid())
+  title             String
+  description       String
+  category          String?
+  location          String
+  city              String?
+  startDate         DateTime
+  endDate           DateTime
+  imageUrl          String?
+  basePrice         Float
+  totalSeats        Int
+  availableSeats    Int
+  status            EventStatus   @default(DRAFT)
+  organizerId       String
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @default(now()) @updatedAt
+  
+  // Dynamic Pricing Fields
+  pricingMode       PricingMode   @default(MANUAL)
+  autoPricingEnabled Boolean      @default(false)
+  minPrice          Float?        // Minimum price for automatic pricing
+  maxPrice          Float?        // Maximum price for automatic pricing
+  lastPriceUpdate   DateTime?
+  priceUpdateReason String?
+
+  organizer         User          @relation("OrganizerEvents", fields: [organizerId], references: [id])
+  bookings          Booking[]
+  tickets           Ticket[]
+  pricingLogs       PricingLog[]
+  feedbacks         Feedback[]
+}
+
+enum EventStatus {
+  DRAFT
+  PUBLISHED
+  CANCELLED
+  COMPLETED
+}
+
+enum PricingMode {
+  AUTOMATIC
+  MANUAL
+}
+
+model Ticket {
+  id        String  @id @default(uuid())
+  eventId   String
+  event     Event   @relation(fields: [eventId], references: [id])
+  qrToken   String  @unique
+  isUsed    Boolean @default(false)
+
+  booking   Booking?
+}
+
+model Booking {
+  id         String   @id @default(uuid())
+  userId     String
+  eventId    String
+  ticketId   String   @unique
+
+  pricePaid  Float
+  ipAddress  String?
+  userAgent  String?
+  riskScore  Float   @default(0)
+
+  status     BookingStatus @default(CONFIRMED)
+  createdAt DateTime @default(now())
+
+  user       User   @relation(fields: [userId], references: [id])
+  event      Event  @relation(fields: [eventId], references: [id])
+  ticket     Ticket @relation(fields: [ticketId], references: [id])
+}
+
+enum BookingStatus {
+  CONFIRMED
+  CANCELLED
+  FLAGGED
+}
+
+model PricingLog {
+  id        String   @id @default(uuid())
+  eventId   String
+  oldPrice  Float
+  newPrice  Float
+  reason    String
+  createdAt DateTime @default(now())
+
+  event     Event @relation(fields: [eventId], references: [id])
+}
+
+model Feedback {
+  id        String   @id @default(uuid())
+  userId    String
+  eventId   String
+  rating    Int
+  comment   String
+  sentiment String?
+
+  createdAt DateTime @default(now())
+
+  user      User  @relation(fields: [userId], references: [id])
+  event     Event @relation(fields: [eventId], references: [id])
+}
