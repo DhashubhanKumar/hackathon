@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { Navbar } from '@/components/navbar';
 import { Footer } from '@/components/footer';
 import { useRouter } from 'next/navigation';
-import { Loader2, Sparkles, Calendar, MapPin, Ticket, ArrowRight, Brain, Zap } from 'lucide-react';
+import { Loader2, Sparkles, Calendar, MapPin, Ticket, ArrowRight, Brain, Zap, AlertCircle, RefreshCcw } from 'lucide-react';
 import { GlassCard } from '@/components/ui/glass-card';
 import Link from 'next/link';
 import { useAuth } from '@/components/auth-provider';
