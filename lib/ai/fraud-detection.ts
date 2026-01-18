@@ -1,10 +1,8 @@
 import { groq, AI_MODEL } from './groq-client';
 import { aiLogger } from './logger';
 import { RiskAssessment } from './types';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/db';
 import { getOrganizerTrustScore } from './trust-score';
-
-const prisma = new PrismaClient();
 
 /**
  * Analyze booking patterns for fraud detection

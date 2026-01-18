@@ -1,9 +1,7 @@
 import { groq, AI_MODEL } from './groq-client';
 import { aiLogger } from './logger';
 import { RecommendationResult } from './types';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '@/lib/db';
 
 interface UserProfile {
     id: string;
@@ -66,8 +64,8 @@ export async function analyzeUserProfile(userId: string): Promise<UserProfile> {
         city: user.city,
         pastBookings: user.bookings.map(booking => ({
             eventId: booking.event.id,
-            eventCategory: booking.event.category,
-            eventCity: booking.event.city,
+            eventCategory: booking.event.category || 'Uncategorized',
+            eventCity: booking.event.city || 'Unknown',
         })),
         feedbackSentiment: sentimentCounts,
     };
@@ -96,8 +94,8 @@ export async function getActiveEvents(): Promise<EventData[]> {
         id: event.id,
         title: event.title,
         description: event.description,
-        category: event.category,
-        city: event.city,
+        category: event.category || 'General',
+        city: event.city || 'Online',
         startDate: event.startDate,
         basePrice: event.basePrice,
         availableSeats: event.availableSeats,
@@ -116,7 +114,7 @@ export async function rankEvents(
 USER PROFILE:
 - Interests: ${userProfile.interests.join(', ') || 'None specified'}
 - City: ${userProfile.city || 'Not specified'}
-- Past Bookings: ${userProfile.pastBookings.length} events (categories: ${[...new Set(userProfile.pastBookings.map(b => b.eventCategory))].join(', ')})
+- Past Bookings: ${userProfile.pastBookings.length} events (categories: ${Array.from(new Set(userProfile.pastBookings.map(b => b.eventCategory))).join(', ')})
 - Feedback Sentiment: ${userProfile.feedbackSentiment.positive} positive, ${userProfile.feedbackSentiment.neutral} neutral, ${userProfile.feedbackSentiment.negative} negative
 
 AVAILABLE EVENTS:
