@@ -4,9 +4,10 @@ import { useState, useEffect } from 'react';
 import { Navbar } from '@/components/navbar';
 import { Footer } from '@/components/footer';
 import { useRouter } from 'next/navigation';
-import { Loader2, Sparkles, Calendar, MapPin, Ticket, ArrowRight, Brain } from 'lucide-react';
+import { Loader2, Sparkles, Calendar, MapPin, Ticket, ArrowRight, Brain, Zap } from 'lucide-react';
 import { GlassCard } from '@/components/ui/glass-card';
 import Link from 'next/link';
+import { useAuth } from '@/components/auth-provider';
 
 interface RecommendedEvent {
     id: string;
@@ -20,44 +21,67 @@ interface RecommendedEvent {
     matchReason: string;
 }
 
+export const dynamic = 'force-dynamic';
+
 export default function RecommendationsPage() {
     const router = useRouter();
+    const { user } = useAuth();
     const [loading, setLoading] = useState(true);
     const [events, setEvents] = useState<RecommendedEvent[]>([]);
 
     useEffect(() => {
-        // Simple auth check
-        const userData = localStorage.getItem('user_data');
-        if (!userData) {
-            router.push('/login?redirect=/recommendations');
-            return;
-        }
+        const checkAuthAndFetch = async () => {
+            // Try to get user ID from various sources
+            let userId = user?.id;
 
-        const user = JSON.parse(userData);
-        // We assume we have a way to get ID, if not in localStorage try to fetch by email or use a dummy flow.
-        // For this demo, let's assume the user object in localStorage has an ID or we fetch it.
-        // Actually, the previous 'Edit Profile' used searchParams userId. 
-        // We should try to get userId from url or localStorage.
+            if (!userId) {
+                // Fallback to local storage if context isn't ready
+                const storedData = localStorage.getItem('user_data');
+                if (storedData) {
+                    try {
+                        const parsed = JSON.parse(storedData);
+                        userId = parsed.id;
+                    } catch (e) {
+                        console.error('Error parsing stored user data', e);
+                    }
+                }
+            }
 
-        // Let's rely on the URL param if present, or localStorage if stored there.
-        // For robustness, I'll fetch recommendations using the user's ID if available. 
-        // If the localStorage user object doesn't have ID, we might need to fetch it first.
-        // But let's assume one is available for now. 
-        // Ideally: window.location.search has userId or we stored it.
+            if (!userId) {
+                // Determine if we should wait or redirect
+                // For now, let's give a small grace period or just redirect if absolutely nothing found
+                // But since we are likely client-side navigating, if useAuth is null and localstorage is null, we are logged out.
 
-        const storedUserId = localStorage.getItem('user_id') || user.id;
+                // One final check: URL param?
+                const params = new URLSearchParams(window.location.search);
+                const paramId = params.get('userId');
+                if (paramId) userId = paramId;
+            }
 
-        if (storedUserId) {
-            fetchRecommendations(storedUserId);
-        } else {
-            // Fallback: If we only have email, usually we'd need to look it up.
-            // For now, let's redirect to login if no ID found.
-            router.push('/login');
-        }
+            if (userId) {
+                await fetchRecommendations(userId);
+            } else {
+                // If we really can't find a user, redirect to login
+                // but wait a moment to ensure hydration isn't just slow
+                const timer = setTimeout(() => {
+                    const freshUser = localStorage.getItem('user_data');
+                    if (!freshUser) {
+                        router.push('/login?redirect=/recommendations');
+                    } else {
+                        // recovered
+                        const p = JSON.parse(freshUser);
+                        if (p.id) fetchRecommendations(p.id);
+                    }
+                }, 1000);
+                return () => clearTimeout(timer);
+            }
+        };
 
-    }, []);
+        checkAuthAndFetch();
+    }, [user, router]); // Re-run if user context updates
 
     const fetchRecommendations = async (userId: string) => {
+        setLoading(true); // Ensure loading state while fetching
         try {
             const res = await fetch('/api/recommendations', {
                 method: 'POST',
@@ -94,7 +118,7 @@ export default function RecommendationsPage() {
                             Curated For You
                         </h1>
                         <p className="text-xl text-gray-400 max-w-2xl mx-auto">
-                            We've analyzed your interests and history to find these perfect matches.
+                            Events you are most likely to love based on your unique interests.
                         </p>
                     </div>
 
@@ -112,10 +136,19 @@ export default function RecommendationsPage() {
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                             {events.map((event, index) => (
                                 <Link href={`/events/${event.id}`} key={event.id} className="group block h-full">
-                                    <GlassCard hoverEffect className="h-full flex flex-col overflow-hidden p-0 border-purple-500/20">
-                                        {/* AI Match Badge */}
+                                    <GlassCard hoverEffect className="h-full flex flex-col overflow-hidden p-0 border-purple-500/20 relative">
+
+                                        {/* Highlighted Match Badge - 65% more likely logic */}
+                                        <div className="absolute top-0 left-0 w-full z-20 bg-gradient-to-r from-purple-600 to-blue-600 py-1 flex items-center justify-center shadow-lg transform -translate-y-full group-hover:translate-y-0 transition-transform duration-300">
+                                            <span className="text-xs font-bold text-white flex items-center gap-1">
+                                                <Zap className="w-3 h-3 text-yellow-300" />
+                                                {event.matchScore}% More Likely to Match Your Interests
+                                            </span>
+                                        </div>
+
+                                        {/* Standard Badge */}
                                         <div className="absolute top-4 right-4 z-20">
-                                            <div className="px-3 py-1 rounded-full bg-black/60 backdrop-blur-md border border-purple-500/50 flex items-center gap-2 shadow-lg shadow-purple-500/20">
+                                            <div className="px-3 py-1 rounded-full bg-black/60 backdrop-blur-md border border-purple-500/50 flex items-center gap-2 shadow-lg shadow-purple-500/20 group-hover:border-purple-400 transition-colors">
                                                 <Sparkles className="w-3 h-3 text-purple-400" />
                                                 <span className="text-xs font-bold text-white">
                                                     {event.matchScore}% Match
@@ -134,9 +167,9 @@ export default function RecommendationsPage() {
                                         </div>
 
                                         <div className="p-6 flex-1 flex flex-col">
-                                            {/* AI Reasoning */}
-                                            <div className="mb-4 p-3 rounded-lg bg-gradient-to-r from-purple-500/10 to-blue-500/10 border border-purple-500/20">
-                                                <p className="text-xs text-purple-200 italic leading-relaxed">
+                                            {/* AI Reasoning - Highlighted */}
+                                            <div className="mb-4 p-3 rounded-lg bg-gradient-to-r from-purple-500/20 to-blue-500/20 border border-purple-500/30 group-hover:border-purple-500/50 transition-colors">
+                                                <p className="text-xs text-purple-100 font-medium italic leading-relaxed">
                                                     "{event.matchReason}"
                                                 </p>
                                             </div>
