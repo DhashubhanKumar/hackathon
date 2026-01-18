@@ -2,10 +2,11 @@ import { prisma } from '@/lib/db';
 import { Navbar } from '@/components/navbar';
 import { Footer } from '@/components/footer';
 import { redirect } from 'next/navigation';
-import { Calendar, MapPin, Ticket, QrCode, User as UserIcon } from 'lucide-react';
+import { Calendar, MapPin, Ticket, QrCode, User as UserIcon, MessageSquare } from 'lucide-react';
 import Link from 'next/link';
 import QRCodeDisplay from '@/components/qr-code-display';
 import { FeedbackForm } from '@/components/dashboard/feedback-form';
+import { UserReviewsList } from '@/components/dashboard/user-reviews-list';
 
 export const revalidate = 0;
 
@@ -26,6 +27,18 @@ async function getUserBookings(userId: string) {
     });
 }
 
+async function getUserFeedbacks(userId: string) {
+    return await prisma.feedback.findMany({
+        where: { userId },
+        include: {
+            event: {
+                select: { title: true }
+            }
+        },
+        orderBy: { createdAt: 'desc' },
+    });
+}
+
 async function getUser(userId: string) {
     return await prisma.user.findUnique({
         where: { id: userId },
@@ -39,17 +52,19 @@ export default async function AttendeeDashboard({ searchParams }: { searchParams
         redirect('/login');
     }
 
-    const [user, bookings] = await Promise.all([
+    const [user, bookings, reviews] = await Promise.all([
         getUser(userId),
         getUserBookings(userId),
+        getUserFeedbacks(userId),
     ]);
 
     if (!user) {
         redirect('/login');
     }
 
-    const upcomingBookings = bookings.filter(b => new Date(b.event.startDate) > new Date());
-    const pastBookings = bookings.filter(b => new Date(b.event.startDate) <= new Date());
+    const now = new Date();
+    const upcomingBookings = bookings.filter(b => new Date(b.event.startDate) > now);
+    const finishedEvents = bookings.filter(b => new Date(b.event.endDate) <= now);
 
     return (
         <>
@@ -93,7 +108,7 @@ export default async function AttendeeDashboard({ searchParams }: { searchParams
                 </div>
 
                 {/* Stats */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
                     <div className="glass p-6 rounded-2xl">
                         <div className="text-3xl font-bold text-blue-400">{bookings.length}</div>
                         <div className="text-gray-400">Total Bookings</div>
@@ -103,25 +118,28 @@ export default async function AttendeeDashboard({ searchParams }: { searchParams
                         <div className="text-gray-400">Upcoming Events</div>
                     </div>
                     <div className="glass p-6 rounded-2xl">
-                        <div className="text-3xl font-bold text-purple-400">{pastBookings.length}</div>
-                        <div className="text-gray-400">Past Events</div>
+                        <div className="text-3xl font-bold text-purple-400">{finishedEvents.length}</div>
+                        <div className="text-gray-400">Finished Events</div>
                     </div>
                 </div>
 
                 {/* Upcoming Bookings */}
                 {upcomingBookings.length > 0 && (
-                    <div className="mb-8">
-                        <h2 className="text-2xl font-bold mb-4">Upcoming Events</h2>
-                        <div className="space-y-4">
+                    <div className="mb-12">
+                        <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
+                            <Calendar className="w-6 h-6 text-blue-400" />
+                            Upcoming Events
+                        </h2>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             {upcomingBookings.map((booking) => (
                                 <div key={booking.id} className="glass p-6 rounded-2xl">
-                                    <div className="flex flex-col lg:flex-row gap-6">
+                                    <div className="flex flex-col gap-6">
                                         <div className="flex-1">
                                             <h3 className="text-xl font-bold mb-2">{booking.event.title}</h3>
                                             <div className="space-y-2 text-sm text-gray-300">
                                                 <div className="flex items-center gap-2">
                                                     <Calendar className="w-4 h-4 text-purple-400" />
-                                                    {new Date(booking.event.startDate).toLocaleDateString()} at {new Date(booking.event.startDate).toLocaleTimeString()}
+                                                    {new Date(booking.event.startDate).toLocaleDateString()} at {new Date(booking.event.startDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                 </div>
                                                 <div className="flex items-center gap-2">
                                                     <MapPin className="w-4 h-4 text-pink-400" />
@@ -129,24 +147,19 @@ export default async function AttendeeDashboard({ searchParams }: { searchParams
                                                 </div>
                                                 <div className="flex items-center gap-2">
                                                     <Ticket className="w-4 h-4 text-green-400" />
-                                                    Booking ID: {booking.id.slice(0, 8)}...
-                                                </div>
-                                            </div>
-                                            <div className="mt-4">
-                                                <span className={`px-3 py-1 rounded-full text-xs font-semibold ${booking.status === 'CONFIRMED' ? 'bg-green-500/20 text-green-300' :
-                                                    booking.status === 'PENDING' ? 'bg-yellow-500/20 text-yellow-300' :
-                                                        'bg-red-500/20 text-red-300'
-                                                    }`}>
                                                     {booking.status}
-                                                </span>
+                                                </div>
                                             </div>
                                         </div>
                                         {booking.ticket && (
-                                            <div className="flex flex-col items-center gap-2">
-                                                <div className="text-sm text-gray-400 mb-2">Your Ticket QR Code</div>
-                                                <QRCodeDisplay value={booking.ticket.qrToken} />
-                                                <div className="text-xs text-gray-500 text-center">
-                                                    Scan at venue entrance
+                                            <div className="flex items-center gap-6 p-4 bg-white/5 rounded-xl border border-white/10">
+                                                <div className="w-24 h-24 bg-white rounded-lg p-1">
+                                                    <QRCodeDisplay value={booking.ticket.qrToken} />
+                                                </div>
+                                                <div>
+                                                    <div className="text-sm font-semibold mb-1 text-white">Your Ticket</div>
+                                                    <div className="text-xs text-gray-400">Scan at entrance</div>
+                                                    <div className="text-[10px] text-gray-500 mt-2 font-mono">{booking.ticket.qrToken}</div>
                                                 </div>
                                             </div>
                                         )}
@@ -157,35 +170,45 @@ export default async function AttendeeDashboard({ searchParams }: { searchParams
                     </div>
                 )}
 
-                {/* Past Bookings */}
-                {pastBookings.length > 0 && (
-                    <div>
-                        <h2 className="text-2xl font-bold mb-4">Past Events</h2>
+                {/* Finished Events */}
+                {finishedEvents.length > 0 && (
+                    <div className="mb-12">
+                        <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
+                            <Ticket className="w-6 h-6 text-purple-400" />
+                            Finished Events
+                        </h2>
                         <div className="space-y-4">
-                            {pastBookings.map((booking) => (
-                                <div key={booking.id} className="glass p-6 rounded-2xl opacity-75">
-                                    <h3 className="text-xl font-bold mb-2">{booking.event.title}</h3>
-                                    <div className="space-y-2 text-sm text-gray-400">
-                                        <div className="flex items-center gap-2">
-                                            <Calendar className="w-4 h-4" />
-                                            {new Date(booking.event.startDate).toLocaleDateString()}
+                            {finishedEvents.map((booking) => (
+                                <div key={booking.id} className="glass p-6 rounded-2xl border-l-4 border-purple-500/50">
+                                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                        <div>
+                                            <h3 className="text-xl font-bold mb-1">{booking.event.title}</h3>
+                                            <p className="text-sm text-gray-400">
+                                                Finished on {new Date(booking.event.endDate).toLocaleDateString()}
+                                            </p>
                                         </div>
-                                        <div className="flex items-center gap-2">
-                                            <MapPin className="w-4 h-4" />
-                                            {booking.event.location}
+                                        <div className="flex-1 md:max-w-md">
+                                            <FeedbackForm
+                                                eventId={booking.event.id}
+                                                userId={userId}
+                                                existingFeedback={booking.event.feedbacks[0]}
+                                            />
                                         </div>
                                     </div>
-
-                                    <FeedbackForm
-                                        eventId={booking.event.id}
-                                        userId={userId}
-                                        existingFeedback={booking.event.feedbacks[0]}
-                                    />
                                 </div>
                             ))}
                         </div>
                     </div>
                 )}
+
+                {/* My Reviews Section */}
+                <div className="mb-12">
+                    <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
+                        <MessageSquare className="w-6 h-6 text-pink-400" />
+                        My Reviews
+                    </h2>
+                    <UserReviewsList reviews={reviews} />
+                </div>
 
                 {bookings.length === 0 && (
                     <div className="glass p-12 rounded-2xl text-center">

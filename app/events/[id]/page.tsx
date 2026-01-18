@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db';
 import { notFound } from 'next/navigation';
 import { Calendar, MapPin, Ticket, TrendingUp, ShieldCheck } from 'lucide-react';
 import { BookingCard } from '@/components/booking-card';
+import { EventReviews } from '@/components/event-reviews';
 import Link from 'next/link';
 
 export const revalidate = 0;
@@ -11,6 +12,16 @@ export const revalidate = 0;
 export default async function EventPage({ params }: { params: { id: string } }) {
     const event = await prisma.event.findUnique({
         where: { id: params.id },
+        include: {
+            feedbacks: {
+                include: {
+                    user: {
+                        select: { name: true }
+                    }
+                },
+                orderBy: { createdAt: 'desc' }
+            }
+        }
     });
 
     if (!event) {
@@ -19,8 +30,6 @@ export default async function EventPage({ params }: { params: { id: string } }) 
 
     // Simulate Dynamic Pricing Logic (using basePrice since we don't have demandFactor)
     const currentPrice = event.basePrice;
-    const priceColor = 'text-green-400';
-    const priceTrend = 'Best Value';
 
     return (
         <>
@@ -61,6 +70,9 @@ export default async function EventPage({ params }: { params: { id: string } }) 
                         <BookingCard event={event} />
                     </div>
                 </div>
+
+                {/* Reviews Section */}
+                <EventReviews feedbacks={event.feedbacks} />
             </div>
             <Footer />
         </>
