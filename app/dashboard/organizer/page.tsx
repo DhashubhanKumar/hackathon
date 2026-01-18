@@ -97,9 +97,9 @@ export default async function OrganizerDashboard({ searchParams }: { searchParam
                         <p className="text-gray-400">Manage your events and listings</p>
                     </div>
                     <div className="flex gap-4">
-                        <Link href="/dashboard/analytics" className="px-6 py-3 rounded-xl bg-purple-900/30 border border-purple-500/30 hover:bg-purple-900/50 text-purple-300 font-bold flex items-center gap-2 transition-all">
+                        <Link href={`/dashboard/analytics?userId=${userId}`} className="px-6 py-3 rounded-xl bg-purple-900/30 border border-purple-500/30 hover:bg-purple-900/50 text-purple-300 font-bold flex items-center gap-2 transition-all">
                             <TrendingUp className="w-5 h-5" />
-                            AI Analytics
+                            AI Insights
                         </Link>
                         <Link href="/dashboard/create" className="px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold flex items-center gap-2 transition-all">
                             <Plus className="w-5 h-5" />

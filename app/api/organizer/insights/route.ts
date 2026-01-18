@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { analyzeEventPerformance } from '@/lib/ai/analytics-engine';
+import { analyzeEventPerformance, analyzeOrganizerPerformance } from '@/lib/ai/analytics-engine';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,16 +10,21 @@ export const dynamic = 'force-dynamic';
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
-        const { eventId } = body;
+        const { eventId, userId } = body;
 
-        if (!eventId) {
+        if (!eventId && !userId) {
             return NextResponse.json(
-                { error: 'eventId is required' },
+                { error: 'Either eventId or userId is required' },
                 { status: 400 }
             );
         }
 
-        const insights = await analyzeEventPerformance(eventId);
+        let insights;
+        if (eventId) {
+            insights = await analyzeEventPerformance(eventId);
+        } else if (userId) {
+            insights = await analyzeOrganizerPerformance(userId);
+        }
 
         return NextResponse.json({
             success: true,

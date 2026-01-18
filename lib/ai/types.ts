@@ -55,7 +55,7 @@ export interface RiskAssessment {
 }
 
 export interface OrganizerInsights {
-    eventId: string;
+    eventId?: string;
     metrics: {
         totalBookings: number;
         revenue: number;

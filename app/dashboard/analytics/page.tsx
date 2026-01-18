@@ -33,19 +33,20 @@ function AnalyticsContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const eventId = searchParams.get('eventId');
+    const userId = searchParams.get('userId');
 
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
 
     useEffect(() => {
-        if (!eventId) {
-            router.push('/');
+        if (!eventId && !userId) {
+            router.push('/dashboard');
             return;
         }
 
         fetchAnalytics();
-    }, [eventId]);
+    }, [eventId, userId]);
 
     const fetchAnalytics = async () => {
         setLoading(true);
@@ -54,7 +55,7 @@ function AnalyticsContent() {
             const res = await fetch('/api/organizer/insights', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ eventId }),
+                body: JSON.stringify({ eventId, userId }),
             });
             const data = await res.json();
 
@@ -86,7 +87,7 @@ function AnalyticsContent() {
                     <div className="flex items-center gap-3">
                         <Brain className="w-10 h-10 text-purple-400" />
                         <div>
-                            <h1 className="text-4xl font-bold">AI Analytics</h1>
+                            <h1 className="text-4xl font-bold">{eventId ? 'Event AI Analytics' : 'Overall Portfolio Insights'}</h1>
                             <p className="text-gray-400">Powered by Groq LLaMA 3.3</p>
                         </div>
                     </div>
