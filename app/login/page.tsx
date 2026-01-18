@@ -19,6 +19,7 @@ export default function LoginPage() {
 
     const [formData, setFormData] = useState({
         email: '',
+        password: '',
         name: '',
         city: ''
     });
@@ -29,6 +30,13 @@ export default function LoginPage() {
         setError('');
 
         try {
+            // Simple password validation
+            if (formData.password !== 'dhashu') {
+                setError('Invalid password');
+                setLoading(false);
+                return;
+            }
+
             if (mode === 'register') {
                 const result = await registerUser({
                     email: formData.email,
@@ -151,6 +159,21 @@ export default function LoginPage() {
                                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                                 className="w-full px-4 py-2 bg-black/20 border border-gray-700 rounded-lg focus:border-blue-500 focus:outline-none"
                                 placeholder="you@example.com"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium mb-2">
+                                <Lock className="w-4 h-4 inline mr-2" />
+                                Password
+                            </label>
+                            <input
+                                type="password"
+                                required
+                                value={formData.password}
+                                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                                className="w-full px-4 py-2 bg-black/20 border border-gray-700 rounded-lg focus:border-blue-500 focus:outline-none"
+                                placeholder="••••••••"
                             />
                         </div>
 

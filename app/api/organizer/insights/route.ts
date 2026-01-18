@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { analyzeEventPerformance } from '@/lib/ai/analytics-engine';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * POST /api/organizer/insights
  * Get AI-powered insights for event organizers

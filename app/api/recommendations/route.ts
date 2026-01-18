@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { generateRecommendations } from '@/lib/ai/recommendation-engine';
 import { prisma } from '@/lib/db';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * POST /api/recommendations
  * Get personalized, enriched event recommendations
