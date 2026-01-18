@@ -27,6 +27,10 @@ interface AnalyticsData {
     };
 }
 
+// ... imports
+
+export const dynamic = 'force-dynamic';
+
 export default function AnalyticsPage() {
     const searchParams = useSearchParams();
     const router = useRouter();

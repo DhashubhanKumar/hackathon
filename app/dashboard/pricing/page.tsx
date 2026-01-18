@@ -14,6 +14,8 @@ interface PricingSuggestion {
     shouldAdjust: boolean;
 }
 
+export const dynamic = 'force-dynamic';
+
 export default function PricingInsightsPage() {
     const searchParams = useSearchParams();
     const router = useRouter();

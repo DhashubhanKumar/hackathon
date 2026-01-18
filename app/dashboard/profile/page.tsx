@@ -12,6 +12,10 @@ const COMMON_INTERESTS = [
     "Sports", "Health", "Education", "Crypto"
 ];
 
+// ... imports
+
+export const dynamic = 'force-dynamic';
+
 export default function ProfilePage() {
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -263,8 +267,8 @@ export default function ProfilePage() {
                                             onClick={() => addInterest(interest)}
                                             disabled={formData.interests.includes(interest)}
                                             className={`px-3 py-1 rounded-full text-xs border transition-all ${formData.interests.includes(interest)
-                                                    ? 'bg-green-500/20 border-green-500/50 text-green-400 opacity-50 cursor-default'
-                                                    : 'bg-white/5 border-white/10 text-gray-300 hover:bg-white/10 hover:border-white/30'
+                                                ? 'bg-green-500/20 border-green-500/50 text-green-400 opacity-50 cursor-default'
+                                                : 'bg-white/5 border-white/10 text-gray-300 hover:bg-white/10 hover:border-white/30'
                                                 }`}
                                         >
                                             {formData.interests.includes(interest) ? '✓ ' : '+ '}

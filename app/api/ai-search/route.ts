@@ -7,6 +7,8 @@ const groq = new Groq({
     dangerouslyAllowBrowser: true,
 });
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(req: Request) {
     try {
         const { query } = await req.json();
