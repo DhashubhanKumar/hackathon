@@ -30,9 +30,8 @@ export default function LoginPage() {
         setError('');
 
         try {
-            // Simple password validation
-            if (formData.password !== 'dhashu') {
-                setError('Invalid password');
+            if (!formData.password) {
+                setError('Password is required');
                 setLoading(false);
                 return;
             }
@@ -43,7 +42,8 @@ export default function LoginPage() {
                     name: formData.name || undefined,
                     city: formData.city || undefined,
                     role: role,
-                    interests: [] // Can be updated later
+                    interests: [],
+                    password: formData.password
                 });
 
                 if (!result.success) {
@@ -73,7 +73,8 @@ export default function LoginPage() {
                 }
             } else {
                 const result = await loginUser({
-                    email: formData.email
+                    email: formData.email,
+                    password: formData.password
                 });
 
                 if (!result.success || !result.user) {

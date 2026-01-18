@@ -11,6 +11,7 @@ export async function registerUser(data: {
     role: "ATTENDEE" | "ORGANIZER";
     city?: string;
     interests?: string[];
+    password?: string;
 }) {
     try {
         // Check if user already exists
@@ -29,17 +30,18 @@ export async function registerUser(data: {
                 role: data.role,
                 city: data.city,
                 interests: data.interests || [],
+                password: data.password || 'dhashu', // Default to dhashu if not provided
             },
         });
 
         return { success: true, user };
     } catch (error) {
         console.error("Error registering user:", error);
-        return { success: false, error: "Failed to register user" };
+        return { success: false, error: error instanceof Error ? error.message : "Failed to register user" };
     }
 }
 
-export async function loginUser(data: { email: string }) {
+export async function loginUser(data: { email: string; password?: string }) {
     try {
         const user = await prisma.user.findUnique({
             where: { email: data.email }
@@ -49,10 +51,15 @@ export async function loginUser(data: { email: string }) {
             return { success: false, error: "User not found. Please register first." };
         }
 
+        // Simple password check (plain text as requested)
+        if (data.password && user.password && user.password !== data.password) {
+            return { success: false, error: "Invalid password" };
+        }
+
         return { success: true, user };
     } catch (error) {
         console.error("Error logging in:", error);
-        return { success: false, error: "Login failed" };
+        return { success: false, error: error instanceof Error ? error.message : "Login failed" };
     }
 }
 
@@ -74,7 +81,8 @@ export async function getUserByEmail(email: string) {
 export async function createEvent(data: {
     title: string;
     description: string;
-    date: Date;
+    startDate: Date;
+    endDate: Date;
     location: string;
     price: number;
     totalTickets: number;
@@ -87,11 +95,12 @@ export async function createEvent(data: {
             data: {
                 title: data.title,
                 description: data.description,
-                date: data.date,
+                startDate: data.startDate,
+                endDate: data.endDate,
                 location: data.location,
-                price: data.price,
-                totalTickets: data.totalTickets,
-                availableTickets: data.totalTickets, // Initially same as total
+                basePrice: data.price,
+                totalSeats: data.totalTickets,
+                availableSeats: data.totalTickets, // Initially same as total
                 organizerId: data.organizerId,
                 imageUrl: data.imageUrl,
                 category: data.category,
@@ -140,32 +149,40 @@ export async function bookEvent(data: { userId: string; eventId: string; tickets
         });
 
         if (!event) return { success: false, error: "Event not found" };
-        if (event.availableTickets < data.tickets) {
+        if (event.availableSeats < data.tickets) {
             return { success: false, error: "Not enough tickets available" };
         }
 
         // 2. Create Booking and Update Event in a transaction
         const result = await prisma.$transaction(async (tx) => {
+            // Create a Ticket first
+            const ticket = await tx.ticket.create({
+                data: {
+                    eventId: data.eventId,
+                    qrToken: Math.random().toString(36).substring(7),
+                }
+            });
+
             const booking = await tx.booking.create({
                 data: {
                     userId: data.userId,
                     eventId: data.eventId,
-                    tickets: data.tickets,
-                    totalPrice: data.totalPrice,
+                    pricePaid: data.totalPrice,
+                    ticketId: ticket.id,
                     status: "CONFIRMED",
                 },
             });
 
-            const updatedEvent = await tx.event.update({
+            await tx.event.update({
                 where: { id: data.eventId },
                 data: {
-                    availableTickets: {
-                        decrement: data.tickets,
+                    availableSeats: {
+                        decrement: 1, // Simple case: 1 ticket per booking for now to match schema
                     },
                 },
             });
 
-            return { booking, updatedEvent };
+            return { booking };
         });
 
         try {
