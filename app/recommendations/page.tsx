@@ -28,8 +28,10 @@ export default function RecommendationsPage() {
     const { user } = useAuth();
     const [loading, setLoading] = useState(true);
     const [events, setEvents] = useState<RecommendedEvent[]>([]);
+    const [error, setError] = useState('');
 
     useEffect(() => {
+        let isMounted = true;
         const checkAuthAndFetch = async () => {
             // Try to get user ID from various sources
             let userId = user?.id;
@@ -59,13 +61,18 @@ export default function RecommendationsPage() {
             }
 
             if (userId) {
+                console.log("Found userId:", userId);
                 await fetchRecommendations(userId);
             } else {
+                console.log("No userId found, attempting redirect...");
                 // If we really can't find a user, redirect to login
                 // but wait a moment to ensure hydration isn't just slow
                 const timer = setTimeout(() => {
+                    if (!isMounted) return;
+
                     const freshUser = localStorage.getItem('user_data');
                     if (!freshUser) {
+                        setLoading(false); // Stop loading before redirecting so user doesn't see broken state
                         router.push('/login?redirect=/recommendations');
                     } else {
                         // recovered
@@ -78,25 +85,60 @@ export default function RecommendationsPage() {
         };
 
         checkAuthAndFetch();
+
+        return () => { isMounted = false; };
     }, [user, router]); // Re-run if user context updates
 
     const fetchRecommendations = async (userId: string) => {
-        setLoading(true); // Ensure loading state while fetching
+        setLoading(true);
+        setError('');
+
         try {
+            // Safety timeout
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
+
             const res = await fetch('/api/recommendations', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ userId }),
+                signal: controller.signal
             });
+
+            clearTimeout(timeoutId);
+
+            if (!res.ok) {
+                throw new Error(`Server responded with ${res.status}`);
+            }
+
             const data = await res.json();
 
             if (data.success) {
                 setEvents(data.recommendations);
+            } else {
+                setError(data.error || 'Failed to load recommendations');
             }
-        } catch (err) {
+        } catch (err: any) {
             console.error(err);
+            if (err.name === 'AbortError') {
+                setError('Request timed out. The AI is taking longer than expected.');
+            } else {
+                setError('Unable to fetch recommendations. Please try again.');
+            }
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleRetry = () => {
+        const userData = localStorage.getItem('user_data');
+        if (userData) {
+            try {
+                const parsed = JSON.parse(userData);
+                if (parsed.id) fetchRecommendations(parsed.id);
+            } catch (e) { }
+        } else {
+            window.location.reload();
         }
     };
 
@@ -122,7 +164,7 @@ export default function RecommendationsPage() {
                         </p>
                     </div>
 
-                    {loading ? (
+                    {loading && (
                         <div className="flex flex-col items-center justify-center py-20">
                             <div className="relative">
                                 <div className="absolute inset-0 bg-purple-500 blur-xl opacity-20 animate-pulse" />
@@ -132,7 +174,26 @@ export default function RecommendationsPage() {
                                 AI is analyzing 1,000+ data points...
                             </p>
                         </div>
-                    ) : events.length > 0 ? (
+                    )}
+
+                    {error && (
+                        <div className="flex flex-col items-center justify-center py-10">
+                            <div className="p-6 bg-red-500/10 border border-red-500/30 rounded-xl max-w-md text-center">
+                                <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
+                                <h3 className="text-xl font-bold text-red-400 mb-2">Oops! Something went wrong</h3>
+                                <p className="text-gray-300 mb-6">{error}</p>
+                                <button
+                                    onClick={handleRetry}
+                                    className="px-6 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-200 rounded-lg transition-colors flex items-center gap-2 mx-auto"
+                                >
+                                    <RefreshCcw className="w-4 h-4" />
+                                    Try Again
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {!loading && !error && events.length > 0 && (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                             {events.map((event, index) => (
                                 <Link href={`/events/${event.id}`} key={event.id} className="group block h-full">
@@ -203,7 +264,9 @@ export default function RecommendationsPage() {
                                 </Link>
                             ))}
                         </div>
-                    ) : (
+                    )}
+
+                    {!loading && !error && events.length === 0 && (
                         <div className="text-center py-20">
                             <p className="text-2xl text-gray-500 mb-4">No recommendations found just yet.</p>
                             <Link href="/dashboard/profile" className="text-purple-400 hover:text-purple-300 underline">
