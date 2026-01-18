@@ -72,12 +72,19 @@ export default function RecommendationsPage() {
 
                     const freshUser = localStorage.getItem('user_data');
                     if (!freshUser) {
-                        setLoading(false); // Stop loading before redirecting so user doesn't see broken state
+                        setLoading(false);
                         router.push('/login?redirect=/recommendations');
                     } else {
-                        // recovered
-                        const p = JSON.parse(freshUser);
-                        if (p.id) fetchRecommendations(p.id);
+                        try {
+                            const p = JSON.parse(freshUser);
+                            if (p && p.id) {
+                                fetchRecommendations(p.id);
+                            } else {
+                                router.push('/login?redirect=/recommendations');
+                            }
+                        } catch (e) {
+                            router.push('/login?redirect=/recommendations');
+                        }
                     }
                 }, 1000);
                 return () => clearTimeout(timer);
