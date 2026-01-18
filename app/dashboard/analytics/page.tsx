@@ -31,7 +31,7 @@ interface AnalyticsData {
 
 export const dynamic = 'force-dynamic';
 
-export default function AnalyticsPage() {
+function AnalyticsContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const eventId = searchParams.get('eventId');
@@ -249,5 +249,15 @@ export default function AnalyticsPage() {
             </div>
             <Footer />
         </>
+    );
+}
+
+import { Suspense } from 'react';
+
+export default function AnalyticsPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-black"><Loader2 className="w-8 h-8 animate-spin text-purple-400" /></div>}>
+            <AnalyticsContent />
+        </Suspense>
     );
 }

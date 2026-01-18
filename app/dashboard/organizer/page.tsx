@@ -140,6 +140,40 @@ export default async function OrganizerDashboard({ searchParams }: { searchParam
                     </div>
                 </div>
 
+                {/* Flagged Bookings Alert */}
+                {events.some(e => e.bookings.some(b => b.status === 'FLAGGED')) && (
+                    <div className="mb-8 p-6 rounded-2xl bg-red-500/10 border border-red-500/30 animate-pulse">
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center">
+                                <Eye className="w-6 h-6 text-red-500" />
+                            </div>
+                            <div>
+                                <h3 className="text-xl font-bold text-red-400">Fraud Alerts Detected</h3>
+                                <p className="text-red-300/70 text-sm">Action required on suspicious bookings</p>
+                            </div>
+                        </div>
+                        <div className="space-y-3">
+                            {events.flatMap(e => e.bookings.filter(b => b.status === 'FLAGGED').map(b => ({ ...b, eventTitle: e.title }))).map(booking => (
+                                <div key={booking.id} className="bg-black/40 rounded-xl p-4 border border-red-500/20 flex items-center justify-between">
+                                    <div>
+                                        <div className="font-semibold text-red-300">{booking.user.name} ({booking.user.email})</div>
+                                        <div className="text-sm text-gray-400">Event: {booking.eventTitle}</div>
+                                        <div className="text-xs text-red-400/60 mt-1">Risk Score: {booking.riskScore || 0.95}</div>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <button className="px-3 py-1.5 rounded-lg bg-red-500 text-white text-sm font-bold hover:bg-red-600 transition-colors">
+                                            Deny
+                                        </button>
+                                        <button className="px-3 py-1.5 rounded-lg bg-white/10 text-white text-sm hover:bg-white/20 transition-colors">
+                                            Investigate
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
                 {/* Analytics Section */}
                 {events.length > 0 && (
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">

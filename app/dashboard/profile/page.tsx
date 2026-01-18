@@ -16,7 +16,7 @@ const COMMON_INTERESTS = [
 
 export const dynamic = 'force-dynamic';
 
-export default function ProfilePage() {
+function ProfileContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const userId = searchParams.get('userId');
@@ -310,5 +310,15 @@ export default function ProfilePage() {
             </div>
             <Footer />
         </>
+    );
+}
+
+import { Suspense } from 'react';
+
+export default function ProfilePage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-black"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>}>
+            <ProfileContent />
+        </Suspense>
     );
 }

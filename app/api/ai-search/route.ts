@@ -11,7 +11,17 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
     try {
-        const { query } = await req.json();
+        let query;
+        try {
+            const body = await req.json();
+            query = body.query;
+        } catch (e) {
+            // Gracefully handle empty body (e.g. during build pre-rendering attempts)
+            return NextResponse.json({ events: [] });
+        }
+
+        if (!query) return NextResponse.json({ events: [] });
+
         const allEvents = await prisma.event.findMany();
 
         // If no key, basic keyword filter mock
