@@ -7,10 +7,23 @@ import Link from 'next/link';
 import QRCodeDisplay from '@/components/qr-code-display';
 import { FeedbackForm } from '@/components/dashboard/feedback-form';
 import { UserReviewsList } from '@/components/dashboard/user-reviews-list';
+import { TicketDownloadButton } from '@/components/dashboard/ticket-download-button';
 
 export const revalidate = 0;
 
 async function getUserBookings(userId: string) {
+    return await prisma.booking.findMany({
+        where: { userId },
+        include: {
+            event: true,
+            ticket: true,
+        },
+        orderBy: { createdAt: 'desc' },
+    });
+}
+
+// Separate function to fetch bookings with feedbacks for finished events
+async function getUserBookingsWithFeedbacks(userId: string) {
     return await prisma.booking.findMany({
         where: { userId },
         include: {
@@ -52,9 +65,10 @@ export default async function AttendeeDashboard({ searchParams }: { searchParams
         redirect('/login');
     }
 
-    const [user, bookings, reviews] = await Promise.all([
+    const [user, bookings, bookingsWithFeedbacks, reviews] = await Promise.all([
         getUser(userId),
         getUserBookings(userId),
+        getUserBookingsWithFeedbacks(userId),
         getUserFeedbacks(userId),
     ]);
 
@@ -64,7 +78,7 @@ export default async function AttendeeDashboard({ searchParams }: { searchParams
 
     const now = new Date();
     const upcomingBookings = bookings.filter(b => new Date(b.event.startDate) > now);
-    const finishedEvents = bookings.filter(b => new Date(b.event.endDate) <= now);
+    const finishedEvents = bookingsWithFeedbacks.filter(b => b.event.endDate && new Date(b.event.endDate) <= now);
 
     return (
         <>
@@ -130,39 +144,82 @@ export default async function AttendeeDashboard({ searchParams }: { searchParams
                             <Calendar className="w-6 h-6 text-blue-400" />
                             Upcoming Events
                         </h2>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
                             {upcomingBookings.map((booking) => (
-                                <div key={booking.id} className="glass p-6 rounded-2xl">
+                                <div key={booking.id} className="glass p-6 rounded-3xl">
                                     <div className="flex flex-col gap-6">
-                                        <div className="flex-1">
-                                            <h3 className="text-xl font-bold mb-2">{booking.event.title}</h3>
-                                            <div className="space-y-2 text-sm text-gray-300">
-                                                <div className="flex items-center gap-2">
-                                                    <Calendar className="w-4 h-4 text-purple-400" />
-                                                    {new Date(booking.event.startDate).toLocaleDateString()} at {new Date(booking.event.startDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                </div>
-                                                <div className="flex items-center gap-2">
-                                                    <MapPin className="w-4 h-4 text-pink-400" />
-                                                    {booking.event.location}
-                                                </div>
-                                                <div className="flex items-center gap-2">
-                                                    <Ticket className="w-4 h-4 text-green-400" />
-                                                    {booking.status}
+                                        <div className="flex flex-col md:flex-row gap-6">
+                                            {/* Event Info */}
+                                            <div className="flex-1">
+                                                <h3 className="text-2xl font-black mb-4 tracking-tight">{booking.event.title}</h3>
+                                                <div className="space-y-3 text-sm text-gray-300">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center">
+                                                            <Calendar className="w-4 h-4 text-purple-400" />
+                                                        </div>
+                                                        <div>
+                                                            <p className="font-semibold">{new Date(booking.event.startDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
+                                                            <p className="text-xs text-gray-500">{new Date(booking.event.startDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-8 h-8 rounded-lg bg-pink-500/10 flex items-center justify-center">
+                                                            <MapPin className="w-4 h-4 text-pink-400" />
+                                                        </div>
+                                                        <div>
+                                                            <p className="font-semibold truncate max-w-[200px]">{booking.event.location}</p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-8 h-8 rounded-lg bg-green-500/10 flex items-center justify-center">
+                                                            <Ticket className="w-4 h-4 text-green-400" />
+                                                        </div>
+                                                        <div>
+                                                            <p className="font-semibold">{booking.status}</p>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
+
+                                            {/* Ticket Preview */}
+                                            {booking.ticket && (
+                                                <div className="flex flex-col items-center gap-4 p-6 bg-white/5 rounded-2xl border border-white/10 min-w-[180px]">
+                                                    <div className="w-32 h-32 bg-white rounded-xl p-2 shadow-2xl">
+                                                        <QRCodeDisplay value={booking.ticket.qrToken} />
+                                                    </div>
+                                                    <div className="text-center">
+                                                        <p className="text-[10px] uppercase tracking-widest text-gray-500 mb-1">Ticket Code</p>
+                                                        <p className="text-xs font-mono text-white/70">{booking.ticket.qrToken.slice(0, 15)}...</p>
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
-                                        {booking.ticket && (
-                                            <div className="flex items-center gap-6 p-4 bg-white/5 rounded-xl border border-white/10">
-                                                <div className="w-24 h-24 bg-white rounded-lg p-1">
-                                                    <QRCodeDisplay value={booking.ticket.qrToken} />
-                                                </div>
-                                                <div>
-                                                    <div className="text-sm font-semibold mb-1 text-white">Your Ticket</div>
-                                                    <div className="text-xs text-gray-400">Scan at entrance</div>
-                                                    <div className="text-[10px] text-gray-500 mt-2 font-mono">{booking.ticket.qrToken}</div>
-                                                </div>
-                                            </div>
-                                        )}
+
+                                        {/* Actions */}
+                                        <div className="pt-6 border-t border-white/5 flex gap-4">
+                                            <TicketDownloadButton
+                                                booking={{
+                                                    id: booking.id,
+                                                    event: {
+                                                        title: booking.event.title,
+                                                        description: booking.event.description,
+                                                        location: booking.event.location,
+                                                        startDate: booking.event.startDate,
+                                                        imageUrl: booking.event.imageUrl,
+                                                        category: booking.event.category
+                                                    },
+                                                    ticket: {
+                                                        qrToken: booking.ticket?.qrToken || ''
+                                                    }
+                                                }}
+                                            />
+                                            <Link
+                                                href={`/events/${booking.event.id}`}
+                                                className="px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-white text-sm font-semibold transition-colors"
+                                            >
+                                                View Event
+                                            </Link>
+                                        </div>
                                     </div>
                                 </div>
                             ))}
@@ -184,7 +241,7 @@ export default async function AttendeeDashboard({ searchParams }: { searchParams
                                         <div>
                                             <h3 className="text-xl font-bold mb-1">{booking.event.title}</h3>
                                             <p className="text-sm text-gray-400">
-                                                Finished on {new Date(booking.event.endDate).toLocaleDateString()}
+                                                Finished on {booking.event.endDate ? new Date(booking.event.endDate).toLocaleDateString() : 'N/A'}
                                             </p>
                                         </div>
                                         <div className="flex-1 md:max-w-md">
