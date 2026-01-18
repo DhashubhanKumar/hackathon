@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { Navbar } from '@/components/navbar';
 import { Footer } from '@/components/footer';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -11,8 +11,6 @@ const COMMON_INTERESTS = [
     "Startups", "AI", "Networking", "Food",
     "Sports", "Health", "Education", "Crypto"
 ];
-
-// ... imports
 
 export const dynamic = 'force-dynamic';
 
@@ -312,8 +310,6 @@ function ProfileContent() {
         </>
     );
 }
-
-import { Suspense } from 'react';
 
 export default function ProfilePage() {
     return (

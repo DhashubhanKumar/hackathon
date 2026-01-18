@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { Navbar } from '@/components/navbar';
 import { Footer } from '@/components/footer';
 import { useSearchParams, useRouter } from 'next/navigation';
@@ -527,8 +527,6 @@ function PricingContent() {
         </>
     );
 }
-
-import { Suspense } from 'react';
 
 export default function PricingInsightsPage() {
     return (
