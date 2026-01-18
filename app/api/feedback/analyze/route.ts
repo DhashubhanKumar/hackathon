@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { analyzeFeedbackForEvent } from '@/lib/ai/sentiment-analysis';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * POST /api/feedback/analyze
  * Analyze feedback sentiment for an event

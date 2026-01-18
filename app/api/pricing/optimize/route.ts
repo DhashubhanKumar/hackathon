@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { suggestPrice, applyPricingSuggestion } from '@/lib/ai/pricing-engine';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * POST /api/pricing/optimize
  * Get dynamic pricing suggestion for an event

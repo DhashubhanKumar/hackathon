@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { suggestPrice } from '@/lib/ai/pricing-engine';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * POST /api/pricing/suggest
  * Get AI price suggestion without applying it

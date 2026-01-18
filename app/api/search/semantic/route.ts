@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { semanticSearch } from '@/lib/ai/semantic-search';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * POST /api/search/semantic
  * Perform semantic search on events using natural language
